@@ -1,0 +1,51 @@
+def newton(v0:Double,b:Double,iter:Int):Double={
+      return v0 - f(v0)/df(v0) // ‘Q‰»Ž®
+    }
+
+    def f(a1:Double):Double={
+      return (cul_b1(a1)+y*cul_c1(a1,cul_b1(a1)))*(cul_a2(a1)+x*cul_c2(cul_a2(a1),cul_b2(cul_a2(a1)))-1)
+        -(cul_b2(cul_a2(a1))+y*cul_c2(cul_a2(a1),cul_b2(cul_a2(a1))))*(a1 + x*cul_c1(a1,cul_b1(a1))-1)
+    }
+
+    def df(a1:Double):Double={
+      val a2 = cul_a2(a1)
+      val da2 = cul_da2(a1)
+      val c1 = cul_c1(a1,cul_b1(a1))
+      val dc1 = cul_dc1(cul_db1(a1))
+      val c2 = cul_c2(a2,cul_b2(a2))
+      val dc2 = cul_dc2(cul_da2(a1),cul_db2(cul_da2(a1)))
+      return (cul_db1(a1)+y*dc1)*(a2+x*c2-1) + (cul_b1(a1)+y*c1)*(da2+x*dc2)
+        - (cul_db2(a2,da2)+y*dc2)*(a1 + x*c1-1) - (cul_b2(cul_a2(a1))+y*c2)*(1 + x*dc1)
+    }
+
+    def cul_a2(a1:Double):Double={
+      return Math.sqrt((y2*y2 - p2)*(x*y*a1 + (p2-y*y)*cul_b1(a1))*(x*y*a1 + (p2-y*y)*cul_b1(a1))
+        /(((p2 - x*x)*a1 + m2*(x*y*a1+(p2-y*y)*cul_b1(a1)) - x*y*cul_b1(a1))*((p2 - x*x)*a1 + m2*(x*y*a1+(p2-y*y)*cul_b1(a1)) - x*y*cul_b1(a1))) + m1)
+    }
+    def cul_da2(a1:Double):Double={
+      return 0
+    }
+    def cul_b1(a1:Double):Double={
+      return Math.sqrt(p2 - x2*x2 + m1*a1*a1)+ m2*a1
+    }
+    def cul_db1(a1:Double):Double={
+      return (-1*(2*m1*a1))/Math.sqrt(p2 - x2*x2 + m1*a1*a1) + m2
+    }
+    def cul_b2(a2:Double):Double={
+      return Math.sqrt(p2 - y2*y2 + m1*a2*a2)+ m2*a2
+    }
+    def cul_db2(a2:Double, da2:Double):Double={
+      return (-1*(2*m1*da2*a2))/Math.sqrt(p2 - y2*y2 + m1*a2*a2) + m2*da2
+    }
+    def cul_c1(a1:Double,b1:Double):Double={
+      return (x2 - a1*x - b1*y)/p2
+    }
+    def cul_dc1(db1:Double):Double={
+      return (-x - db1*y)/p2
+    }
+    def cul_c2(a2:Double,b2:Double):Double={
+      return (y2 - a2*x - b2*y)/p2
+    }
+    def cul_dc2(da2:Double, db2:Double):Double={
+      return -1*(x*da2 + db2*y)/p2
+    }

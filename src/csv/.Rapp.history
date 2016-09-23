@@ -1,0 +1,22 @@
+setwd("Dropbox (smartnova)/Hosobe/python/csv")
+library(igraph)
+g2 <- random.graph.game(100, p=0.1, direct=F)
+plot(g2)
+dist <- shortest.paths(g2)
+el <- get.edgelist(g2)
+y <- cmdscale(dist, l=dim(dist)-1, eig=T)
+p <- y$points
+eval <- y$eig
+write.table(eval, "eigVals100.csv",quote=F,row.names=F,col.names=F,append=F)
+write.table(el, "edgeList100.csv",quote=F,row.names=F,col.names=F,append=F,sep=",")
+write.table(p, "mdSpace100.csv",quote=F,row.names=F,col.names=F,append=F,sep=",")
+g2 <- random.graph.game(1000, p=0.01, direct=F)
+plot(g2)
+distance2 <- shortest.paths(g2)
+eL2 <- get.edgelist(g2)
+y2 <- cmdscale(distance2, k=dim(distance2)-1, eig=T)
+p2 <- y2$points
+eVals2 <- y2$eig
+write.table(eVals2,”eigVals1000.csv",quote=F,row.names=F,col.names=F,append=F)
+write.table(eL2,”edgeList1000.csv",quote=F,row.names=F,col.names=F,append=F,sep=",")
+write.table(p2,”mdSpace1000.csv",quote=F,row.names=F,col.names=F,append=F,sep=",")
