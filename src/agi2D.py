@@ -67,25 +67,25 @@ print("init: ready")
 # sympy
 a1,b1,c1,a2,b2,c2,t,s = sp.symbols('a1 b1 c1 a2 b2 c2 t s')   # variables
 x_pre,y_pre,x_new,y_new,f0_norm = sp.symbols('x_pre y_pre x_new y_new f0_norm')  # values
-var = (x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,t,s)
+var = (x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,s,t)
 
-f = Matrix([
-		a1*a1 + b1*b1 + c1*c1 - 1,
-		a2*a2 + b2*b2 + c2*c2 - 1,
-        a1*a2 + b1*b2 + c1*c2,
-		s*s + t*t - 1,
-		a1*s + b1*t - s,
-        a2*s + b2*t - t,
-		f0_norm*c1 + x_pre*a1 + y_pre*b1 - x_new,
-        f0_norm*c2 + x_pre*a2 + y_pre*b2 - y_new
-		])
+f = np.array([
+	a1*a1 + b1*b1 + c1*c1 - 1,
+    a2*a2 + b2*b2 + c2*c2 - 1,
+    a1*a2 + b1*b2 + c1*c2,
+	s*s + t*t - 1,
+    a1*s + b1*t - s,
+    a2*s + b2*t - t,
+    f0_norm*c1 + x_pre*a1 + y_pre*b1 - x_new,
+    f0_norm*c2 + x_pre*a2 + y_pre*b2 - y_new
+])
 
-func = sp.Matrix.norm(f)
+func = sum(f ** 2)
 lam_f = lambdify(var, func, 'numpy')
 
 def lam(x_pre,y_pre,x_new,y_new,f0_norm):
-    return lambda a1,b1,c1,a2,b2,c2,t,s: \
-        lam_f(x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,t,s)
+    return lambda a1,b1,c1,a2,b2,c2,s,t: \
+        lam_f(x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,s,t)
 
 arr_init = np.array([1, 0, 0, 0, 1, 0, 1, 1])
 print("lambda: ready")
@@ -111,14 +111,14 @@ def move_node(event):
     y2 = unscale(event.y,False)
     thisID = event.widget.find_withtag(CURRENT)[0] - (edge_num+1)
     f0 = MDS[thisID] - (Pos_origin[thisID,0]*Es[:,0] + Pos_origin[thisID,1]*Es[:,1])
-    Es[:,2] = f0 / np.linalg.norm(f0)
-    f2 = lam(Pos_origin[thisID,0],Pos_origin[thisID,1],x2, y2,np.linalg.norm(f0))
+    Es[:, 2] = f0 / np.linalg.norm(f0)
+    f2 = lam(Pos_origin[thisID,0], Pos_origin[thisID,1], x2, y2, np.linalg.norm(f0))
     def g(args): return f2(*args)
     res = opt.minimize(g, arr_init, method='L-BFGS-B')
     print(res)
     if (res.success):
-        Coefficient = res.x[0:6].reshape(3, 2)
-        Es[:, 0:2] = Es.dot(Coefficient)
+        Coefficient = res.x[0:6].reshape(2, 3)
+        Es[:, 0:2] = Es.dot(Coefficient.T)
         update_points()
         for i in range(node_num):
             w.coords(circles[i], Pos_scaled[0, i] - r, Pos_scaled[1, i] - r, Pos_scaled[0, i] + r, Pos_scaled[1, i] + r)
