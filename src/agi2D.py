@@ -28,8 +28,8 @@ def d2c(pnt, bool):  # 射影された平面上の座標を元のスケールに
 # load adjacency and multi-dimensional space
 EdgeList = np.genfromtxt('csv/edgeList.csv', delimiter=",").astype(np.int64)
 edge_num = len(EdgeList)
-MDS = np.genfromtxt('csv/mdSpace.csv', delimiter=",")
-node_num, high_dim = MDS.shape
+HighDimSpace = np.genfromtxt('csv/mdSpace.csv', delimiter=",")
+node_num, high_dim = HighDimSpace.shape
 
 low_dim = 2  # この次元のAGIを実行する
 
@@ -40,6 +40,7 @@ def genE():
     e0_column = np.zeros(high_dim).reshape(1,high_dim)
     for i in range(high_dim): base[i % low_dim][i] = 1
     E = np.r_[base*L, e0_column]
+    print(e0_column.shape)
     return E.T  # 縦ベクトル
 
 Es = genE()  # 射影ベクトルを縦ベクトルで格納(low_dim行が射影ベクトルで、もう１行がベクトル)
@@ -49,17 +50,9 @@ Pos_scaled = np.zeros(node_num*low_dim).reshape(low_dim,node_num)  # 画面サ�
 boundingV = 0  # Vertical boundary
 boundingH = 0  # Horizontal boundary
 
-def scale(pnt,bool):
-	if(bool): return width * (pnt + boundingH / 2) / boundingH + (WIDTH - width) / 2
-	else: return (height - 100) * (boundingV / 2 - pnt) / boundingV + (HEIGHT - height) / 2
-
-def unscale(pnt,bool):
-	if (bool): return boundingH * ((pnt - (WIDTH - width) / 2) - width / 2) / width
-	else: return boundingV * ((pnt - (HEIGHT - height) / 2) - (height - 100) / 2) / (100 - height)
-
 def update_points():
     global Pos_origin, boundingH, boundingV
-    Pos_origin = MDS.dot(Es[:,0:low_dim])
+    Pos_origin = HighDimSpace.dot(Es[:, 0:low_dim])
     boundingH = max([np.amax(Pos_origin[:,0]), abs(np.amin(Pos_origin[:,0]))]) * 2
     boundingV = max([np.amax(Pos_origin[:,1]), abs(np.amin(Pos_origin[:,1]))]) * 2
     for i in range(node_num):
@@ -69,27 +62,6 @@ update_points()
 
 print("init: ready")
 
-# sympy
-"""
-a1,b1,c1,a2,b2,c2,t,s = sp.symbols('a1 b1 c1 a2 b2 c2 t s')   # variables
-x_pre,y_pre,x_new,y_new,f0_norm = sp.symbols('x_pre y_pre x_new y_new f0_norm')  # values
-var = (x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,s,t)
-
-f = np.array([
-	a1*a1 + b1*b1 + c1*c1 - 1,
-    a2*a2 + b2*b2 + c2*c2 - 1,
-    a1*a2 + b1*b2 + c1*c2,
-	s*s + t*t - 1,
-    a1*s + b1*t - s,
-    a2*s + b2*t - t,
-    f0_norm*c1 + x_pre*a1 + y_pre*b1 - x_new,
-    f0_norm*c2 + x_pre*a2 + y_pre*b2 - y_new
-])
-
-func = sum(f ** 2)
-lam_f = lambdify(var, func, 'numpy')
-print(lambdastr(var,func))
-"""
 lam_f = lambda x_pre,y_pre,x_new,y_new,f0_norm,a1,b1,c1,a2,b2,c2,s,t: \
     ((s**2 + t**2 - 1)**2 + (a1*a2 + b1*b2 + c1*c2)**2 + (a1*s + b1*t - s)**2 + (a2*s + b2*t - t)**2 +
      (a1**2 + b1**2 + c1**2 - 1)**2 + (a2**2 + b2**2 + c2**2 - 1)**2 + (a1*x_pre + b1*y_pre + c1*f0_norm - x_new)**2 +
@@ -122,9 +94,10 @@ def move_node(event):
     x2 = d2c(event.x, True)
     y2 = d2c(event.y, False)
     thisID = event.widget.find_withtag(CURRENT)[0] - (edge_num+1)
-    f0 = MDS[thisID] - (Pos_origin[thisID,0]*Es[:,0] + Pos_origin[thisID,1]*Es[:,1])
-    Es[:, 2] = f0 / np.linalg.norm(f0)
-    f2 = lam(Pos_origin[thisID,0], Pos_origin[thisID,1], x2, y2, np.linalg.norm(f0))
+    f0 = HighDimSpace[thisID] - (Pos_origin[thisID, 0] * Es[:, 0] + Pos_origin[thisID, 1] * Es[:, 1])
+    f0_norm = np.linalg.norm(f0)
+    Es[:, 2] = f0 / f0_norm
+    f2 = lam( x2, y2, Pos_origin[thisID,0], Pos_origin[thisID,1], f0_norm)
     def g(args): return f2(*args)
     res = opt.minimize(g, arr_init, method='L-BFGS-B')
     print(res)

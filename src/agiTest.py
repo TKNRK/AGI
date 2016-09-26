@@ -12,34 +12,30 @@ import time
 _width = _height = 700  # window's width and height
 width = height = 500  # canvas's width and height
 
-def scale(pnt,bool):  # データの座標を射影する平面の画面サイズに合わせる
-	if(bool): return width * (pnt + boundingH / 2) / boundingH + (_width - width) / 2
-	else: return (height - 100) * (boundingV / 2 - pnt) / boundingV + (_height - height) / 2
-def unscale(pnt,bool):  # 射影された平面上の座標を元のスケールに戻す
-	if (bool): return boundingH * ((pnt - (_width - width) / 2) - width / 2) / width
-	else: return boundingV * ((pnt - (_height - height) / 2) - (height - 100) / 2) / (100 - height)
-
 # initialize(データ処理関係)
 # load adjacency and multi-dimensional space
 EdgeList = np.genfromtxt('csv/edgeList.csv', delimiter=",").astype(np.int64)
 edge_num = len(EdgeList)
-MDS = np.genfromtxt('csv/mdSpace.csv', delimiter=",")
-node_num, high_dim = MDS.shape
+HighDimSpace = np.genfromtxt('csv/mdSpace.csv', delimiter=",")
+node_num, high_dim = HighDimSpace.shape
 
 low_dim = 2  # この次元のAGIを実行する
 
 # generate projection vectors
 def genE():
-    L = np.sqrt(np.genfromtxt('csv/eigVals.csv', delimiter=",")[0:high_dim])
-    base = np.zeros(high_dim * low_dim).reshape(low_dim, high_dim)
-    e0_column = np.zeros(high_dim).reshape(1,high_dim)
-    for i in range(high_dim): base[i % low_dim][i] = 1
-    E = np.r_[base*L, e0_column]
-    return E.T  # 縦ベクトル
+    L = np.diag(np.sqrt(np.genfromtxt('csv/eigVals.csv', delimiter=",")[0:high_dim]))
+    base = np.zeros(high_dim * low_dim).reshape(high_dim, low_dim)
+    for i in range(high_dim): base[i][i % low_dim] = 1
+    e0_column = np.zeros(high_dim).reshape(high_dim, 1)
+    print(e0_column.shape)
+    print(base.shape)
+    print(L.shape)
+    E = np.c_[L.dot(base), e0_column]
+    return E  # 縦ベクトル
 
 Es = genE()  # 射影ベクトルを縦ベクトルで格納(low_dim行が射影ベクトルで、もう１行がベクトル)
 
-Pos_origin = np.zeros(node_num*low_dim).reshape(node_num,low_dim)  # 計算するデータの実際の座標
+Pos_origin = np.array([])  # 計算するデータの実際の座標
 Pos_scaled = np.zeros(node_num*low_dim).reshape(low_dim,node_num)  # 画面サイズに合わせたデータの座標
 boundingV = 0  # Vertical boundary
 boundingH = 0  # Horizontal boundary
@@ -52,9 +48,14 @@ def unscale(pnt,bool):
 	if (bool): return boundingH * ((pnt - (_width - width) / 2) - width / 2) / width
 	else: return boundingV * ((pnt - (_height - height) / 2) - (height - 100) / 2) / (100 - height)
 
+def update_points_cond(id):
+    hds_norm = np.linalg.norm(HighDimSpace[id])
+    lds_norm = np.linalg.norm(Pos_origin[id,:])
+    if (hds_norm > lds_norm): update_points()
+
 def update_points():
     global Pos_origin, boundingH, boundingV
-    Pos_origin = MDS.dot(Es[:,0:low_dim])
+    Pos_origin = HighDimSpace.dot(Es[:, 0:low_dim])
     boundingH = max([np.amax(Pos_origin[:,0]), abs(np.amin(Pos_origin[:,0]))]) * 2
     boundingV = max([np.amax(Pos_origin[:,1]), abs(np.amin(Pos_origin[:,1]))]) * 2
     for i in range(node_num):
@@ -110,8 +111,8 @@ def move_node(event):
     x2 = unscale(event.x,True)
     y2 = unscale(event.y,False)
     thisID = event.widget.find_withtag(CURRENT)[0] - (edge_num+1)
-    p_p = MDS[thisID].dot(MDS[thisID])
-    Es[:,2] = MDS[thisID]
+    p_p = HighDimSpace[thisID].dot(HighDimSpace[thisID])
+    Es[:,2] = HighDimSpace[thisID]
     f2 = lam(Pos_origin[thisID,0],Pos_origin[thisID,1],x2, y2, p_p)
     def g(args): return f2(*args)
     res = opt.minimize(g, arr_init, method='L-BFGS-B')
